@@ -3,9 +3,25 @@ from tkinter import ttk
 import time
 from datetime import datetime, timedelta
 import threading
+from typing import Optional
+from archis_data import ARCHIS_DATA 
 
+
+def treeview_sort_column(tv, col, reverse):
+    l = [(tv.set(k, col), k) for k in tv.get_children('')]
+    try:
+        l.sort(key=lambda t: int(t[0]), reverse=reverse)
+        #      ^^^^^^^^^^^^^^^^^^^^^^^
+    except ValueError:
+        l.sort(reverse=reverse)
+
+    for index, (val, k) in enumerate(l):
+        tv.move(k, '', index)
+
+    tv.heading(col, command=lambda: treeview_sort_column(tv, col, not reverse))  
 class Monster:
-    def __init__(self, name, respawn_minutes, location=""):
+    def __init__(self, id_val:int, name, respawn_minutes, location=""):
+        self.id = id_val
         self.name = name
         self.respawn_minutes = respawn_minutes
         self.respawn_time = None
@@ -15,9 +31,10 @@ class Monster:
 
 class MonsterTimerApp:
     def __init__(self, root):
+        self.id_counter = 0
         self.root = root
         self.root.title("Monster Respawn Timer")
-        self.root.geometry("850x350")
+        self.root.geometry("825x350")
         
         # List to store monster objects
         self.monsters = []
@@ -49,7 +66,7 @@ class MonsterTimerApp:
         self.time_entry = ttk.Entry(self.main_frame, textvariable=self.time_var)
         self.time_entry.grid(row=0, column=3, padx=5, pady=5)
 
-        # Locaiton input
+        # Location input
         ttk.Label(self.main_frame, text="Location: ").grid(row=0, column=4, padx=5, pady=5)
         self.location_var = tk.StringVar()
         self.location_entry = ttk.Entry(self.main_frame, textvariable=self.location_var)
@@ -71,39 +88,46 @@ class MonsterTimerApp:
         self.tree.heading('location', text='Location')
         
         # Define column widths
-        self.tree.column('name', width=200)
-        self.tree.column('respawn_time', width=100)
-        self.tree.column('status', width=100)
-        self.tree.column('time_remaining', width=150)
-        self.tree.column('location', width=150)
+        self.tree.column('name', width=175)
+        self.tree.column('respawn_time', width=75, anchor='center')
+        self.tree.column('status', width=50, anchor='center')
+        self.tree.column('time_remaining', width=75, anchor='center')
+        self.tree.column('location', width=250,  stretch=True)
         
         # Add scrollbar
         scrollbar = ttk.Scrollbar(self.main_frame, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
+
         
         # Grid tree and scrollbar
-        self.tree.grid(row=1, column=0, columnspan=6, sticky='nsew', padx=5, pady=5)
+        self.tree.grid(row=1, column=0, columnspan=6, sticky='nsew')
         scrollbar.grid(row=1, column=6, sticky='ns')
         
+        
+        #for col in columns:
+        #    self.tree.heading(col, text=col, command= lambda c=col: treeview_sort_column(self.tree, c, False))
+
         # Buttons frame
         button_frame = ttk.Frame(self.main_frame)
-        button_frame.grid(row=2, column=0, columnspan=5, pady=5)
+        button_frame.grid(row=2, column=0, columnspan=6, pady=5)
         
         ttk.Button(button_frame, text="Start Timer", command=self.start_timer).pack(side=tk.LEFT, padx=5)
         ttk.Button(button_frame, text="Delete Monster", command=self.delete_monster).pack(side=tk.LEFT, padx=5)
 
-    def add_monster(self):
-        name = self.name_var.get()
-        location = self.location_var.get()
-        try:
-            respawn_time = float(self.time_var.get())
-        except ValueError:
-            return
+    def add_monster(self, name:Optional[str]=None, location:Optional[str]=None, respawn_time:Optional[float]=None):
+        if name == None:
+            name = self.name_var.get()
+            location = self.location_var.get()
+            try:
+                respawn_time = float(self.time_var.get())
+            except ValueError:
+                return
         
         if name and respawn_time > 0:
-            monster = Monster(name, respawn_time, location)
+            self.id_counter = 1 + self.id_counter
+            monster = Monster(self.id_counter, name, respawn_time, location)
             self.monsters.append(monster)
-            self.tree.insert('', tk.END, values=(name, f"{respawn_time} min", "Ready", "--:--", location))
+            self.tree.insert('', tk.END, values=(name, f"{respawn_time} min", "Not seen", "--:--", location))
             
             # Clear inputs
             self.name_var.set("")
@@ -158,6 +182,8 @@ class MonsterTimerApp:
 def main():
     root = tk.Tk()
     app = MonsterTimerApp(root)
+    for monster in ARCHIS_DATA:
+        app.add_monster(monster.get('name'), monster.get('location'), monster.get('respawn'))
     root.mainloop()
 
 if __name__ == "__main__":
