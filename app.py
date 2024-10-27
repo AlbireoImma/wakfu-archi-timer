@@ -51,8 +51,8 @@ class MonsterTimerApp:
 
         # Locaiton input
         ttk.Label(self.main_frame, text="Location: ").grid(row=0, column=4, padx=5, pady=5)
-        self.location = tk.StringVar()
-        self.location_entry = ttk.Entry(self.main_frame, textvariable=self.location)
+        self.location_var = tk.StringVar()
+        self.location_entry = ttk.Entry(self.main_frame, textvariable=self.location_var)
         self.location_entry.grid(row=0, column=5, padx=5, pady=5)
         
         # Add button
@@ -94,19 +94,21 @@ class MonsterTimerApp:
 
     def add_monster(self):
         name = self.name_var.get()
+        location = self.location_var.get()
         try:
             respawn_time = float(self.time_var.get())
         except ValueError:
             return
         
         if name and respawn_time > 0:
-            monster = Monster(name, respawn_time)
+            monster = Monster(name, respawn_time, location)
             self.monsters.append(monster)
-            self.tree.insert('', tk.END, values=(name, f"{respawn_time} min", "Ready", "--:--"))
+            self.tree.insert('', tk.END, values=(name, f"{respawn_time} min", "Ready", "--:--", location))
             
             # Clear inputs
             self.name_var.set("")
             self.time_var.set("")
+            self.location_var.set("")
 
     def start_timer(self):
         selected_item = self.tree.selection()
